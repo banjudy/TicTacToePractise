@@ -4,16 +4,13 @@ import exception.InvalidGameException;
 import exception.InvalidParamException;
 import exception.NotFoundException;
 import lombok.AllArgsConstructor;
-import model.Game;
-import model.GameStatus;
-import model.Player;
+import model.*;
 import org.springframework.stereotype.Service;
 import storage.GameStorage;
 
 import java.util.UUID;
 
-import static model.GameStatus.IN_PROGRESS;
-import static model.GameStatus.NEW;
+import static model.GameStatus.*;
 
 @Service
 @AllArgsConstructor
@@ -54,7 +51,46 @@ public class GameService {
         return game;
     }
 
-    public Game gamePlay(){
-        return null;
+    public Game gamePlay(GamePlay gamePlay) throws NotFoundException, InvalidGameException {
+        if (!GameStorage.getInstance().getGames().containsKey(gamePlay.getGameId())) {
+            throw new NotFoundException("Game not found");
+        }
+        Game game = GameStorage.getInstance().getGames().get(gamePlay.getGameId());
+        if(game.getStatus().equals(FINISHED)) {
+            throw new InvalidGameException("Game is already finished.");
+        }
+        int[][] board = game.getBoard();
+        board[gamePlay.getCoordinateX()][gamePlay.getCoordinateY()] = gamePlay.getType().getValue();
+
+        checkWinner(game.getBoard(), TicToe.X);
+        checkWinner(game.getBoard(), TicToe.O);
+
+        GameStorage.getInstance().setGame(game);
+
+        return game;
+    }
+
+    public boolean checkWinner(int[][] board, TicToe ticToe) {
+        int[] boardArray = new int[9];
+        int counterIndex = 0;
+        for (int i = 0; i<board.length; i++) {
+            for (int j = 0; j<board[i].length; j++) {
+                boardArray[counterIndex] = board[i][j];
+                counterIndex++;
+            }
+        }
+        int[][] winCombinations = {{0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {1, 4, 7}, {0, 3, 6}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6}};
+        for (int i=0; i<winCombinations.length; i++) {
+            int counter = 0;
+            for (int j = 0; j<winCombinations[i].length; j++) {
+                if(boardArray[winCombinations[i][j]] == ticToe.getValue()) {
+                    counter++;
+                    if (counter == 3) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }
